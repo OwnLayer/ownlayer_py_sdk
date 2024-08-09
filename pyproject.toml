@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "ownlayer-py-sdk"
+version = "0.1.0"
+description = "Ownlayer Python SDK"
+authors = ["Diego Sisto <diego@ownlayer.com>", "Jack <jack@ownlayer.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+openai = "^1.37.2"
+python-dotenv = "^1.0.1"
+wrapt = "^1.16.0"
+requests = "^2.32.3"
+datetime = "^5.5"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
