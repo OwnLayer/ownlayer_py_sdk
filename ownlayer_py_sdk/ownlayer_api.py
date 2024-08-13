@@ -13,7 +13,7 @@ def post_inference(**kwargs):
     if api_key is None:
         raise Exception('No OWNLAYER_API_KEY found')
 
-    print(kwargs)
+    # print(f"New ownlayer trace {kwargs}")
     res = requests.post(url, json = kwargs, headers={
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",

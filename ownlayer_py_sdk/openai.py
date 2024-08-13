@@ -18,7 +18,7 @@ except ImportError:
     OpenAI = None
 
 def now():
-    return int(datetime.now(timezone.utc).timestamp())
+    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 class OpenAiDefinition:
     module: str
@@ -68,6 +68,98 @@ OPENAI_METHODS_V1 = [
     ),
 ]
 
+# TODO support openai V0
+def _is_streaming_response(response):
+    return (
+        isinstance(response, types.GeneratorType)
+        or isinstance(response, types.AsyncGeneratorType)
+        or isinstance(response, openai.Stream)
+        or isinstance(response, openai.AsyncStream)
+    )
+
+class ResponseGenerator:
+    def __init__(
+        self,
+        *,
+        request,
+        response,
+        start_time,
+    ):
+        self.items = []
+        self.start_time = start_time
+        self.request = request
+        self.response = response
+
+    def __iter__(self):
+        try:
+            for i in self.response:
+                self.items.append(i)
+
+                yield i
+        finally:
+            self._finalize()
+
+    def __enter__(self):
+        return self.__iter__()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def _finalize(self):
+        output = ""
+        prompt_tokens = 0
+        total_tokens = 0
+        for chunk in self.items:
+            if chunk.usage is not None:
+                prompt_tokens += chunk.usage.prompt_tokens
+                total_tokens += chunk.usage.total_tokens
+
+            output += (chunk.choices[0].delta.content or "")
+
+        _generate_trace(self.request, output, prompt_tokens, total_tokens, self.start_time)
+
+class ResponseGeneratorAsync:
+    def __init__(
+        self,
+        *,
+        request,
+        response,
+        start_time,
+    ):
+        self.items = []
+        self.start_time = start_time
+        self.request = request
+        self.response = response
+
+    async def __aiter__(self):
+        try:
+            async for i in self.response:
+                self.items.append(i)
+
+                yield i
+        finally:
+            await self._finalize()
+
+    async def __aenter__(self):
+        return self.__aiter__()
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        pass
+
+    async def _finalize(self):
+        output = ""
+        prompt_tokens = 0
+        total_tokens = 0
+        for chunk in self.items:
+            if chunk.usage is not None:
+                prompt_tokens += chunk.usage.prompt_tokens
+                total_tokens += chunk.usage.total_tokens
+
+            if len(chunk.choices) > 0:
+                output += (chunk.choices[0].delta.content or "")
+
+        _generate_trace(self.request, output, prompt_tokens, total_tokens, self.start_time)
+
 def _ownlayer_wrapper(func):
     def _with_ownlayer(open_ai_definitions, initialize):
         def wrapper(wrapped, instance, args, kwargs):
@@ -77,43 +169,49 @@ def _ownlayer_wrapper(func):
 
     return _with_ownlayer
 
-def _ownlayer_trace(request: dict, openai_response, start_time):
+def _generate_trace(request, output, prompt_tokens, total_tokens, start_time):
     try:
         messages = request.get("messages", [])
         input = list(filter(lambda x: x["role"] == "user", messages))[-1]["content"]
-        output = openai_response.choices[0].message.content
-        prompt_tokens = openai_response.usage.prompt_tokens
-        total_tokens = openai_response.usage.total_tokens
+        system_messages = list(filter(lambda x: x["role"] == "system", messages))
         settings = {
             "provider": "OpenAI",
             "model": request.get("model", None),
             "max_tokens": request.get("max_tokens", None),
             "temperature": request.get("temperature", None),
-            "system_message": list(filter(lambda x: x["role"] == "system", messages))[-1]["content"]
+            "system_message": system_messages[-1]["content"] if len(system_messages) > 0 else ""
         }
         additional_metadata = { "_source": "ownlayer_py_sdk", "_sdk_version": "0.1" }
-        post_inference(input=input,
-                       output=output,
-                       start_time=start_time,
-                       end_time=now(),
-                       prompt_tokens=prompt_tokens,
-                       total_tokens=total_tokens,
-                       completion_tokens= total_tokens - prompt_tokens,
-                       additional_metadata=additional_metadata,
-                       settings=settings
-                       )
 
-        return openai_response
+        post_inference(input=input,
+                    output=output,
+                    start_time=start_time,
+                    end_time=now(),
+                    prompt_tokens=prompt_tokens,
+                    total_tokens=total_tokens,
+                    completion_tokens= total_tokens - prompt_tokens,
+                    additional_metadata=additional_metadata,
+                    settings=settings
+                    )
     except Exception as ex:
         print(f"Exception during ownlayer trace: {ex}")
-        raise ex
+
+def _ownlayer_trace(request: dict, openai_response, start_time):
+    output = openai_response.choices[0].message.content
+    prompt_tokens = openai_response.usage.prompt_tokens
+    total_tokens = openai_response.usage.total_tokens
+    _generate_trace(request, output, prompt_tokens, total_tokens, start_time)
+    return openai_response
     
 @_ownlayer_wrapper
 def _wrap(open_ai_resource: OpenAiDefinition, initialize, wrapped, args, kwargs):
     start_time = now()
     openai_response = wrapped(**kwargs)
-    _ownlayer_trace(kwargs, openai_response, start_time)
-    return openai_response
+
+    if _is_streaming_response(openai_response):
+        return ResponseGenerator(request=kwargs, response=openai_response, start_time=start_time)
+    
+    return _ownlayer_trace(kwargs, openai_response, start_time)
 
 @_ownlayer_wrapper
 async def _wrap_async(
@@ -121,8 +219,11 @@ async def _wrap_async(
 ):
     start_time = now()
     openai_response = await wrapped(**kwargs)
-    _ownlayer_trace(kwargs, openai_response, start_time)
-    return openai_response
+
+    if _is_streaming_response(openai_response):
+        return ResponseGeneratorAsync(request=kwargs, response=openai_response, start_time=start_time)
+    
+    return _ownlayer_trace(kwargs, openai_response, start_time)
 
 
 class OpenAIOwnlayer:
