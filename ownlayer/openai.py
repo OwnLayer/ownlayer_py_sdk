@@ -181,7 +181,7 @@ def _generate_trace(request, output, prompt_tokens, total_tokens, start_time):
             "temperature": request.get("temperature", None),
             "system_message": system_messages[-1]["content"] if len(system_messages) > 0 else ""
         }
-        additional_metadata = { "_source": "ownlayer_py_sdk", "_sdk_version": "0.1" }
+        additional_metadata = { "_source": "ownlayer_py_sdk", "_sdk_version": "0.1.1" }
 
         post_inference(input=input,
                     output=output,
