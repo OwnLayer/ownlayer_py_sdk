@@ -6,13 +6,13 @@ Python SDK to integrate Ownlayer
 Install SDK
 
 ```shell
-pip install ownlayer-sdk
+pip install ownlayer
 ```
 
 Change openai import to use Ownlayer wrapper
 ```diff
 - import openai
-+ from ownlayer_py_sdk.openai import openai
++ from ownlayer.openai import openai
 
 
 def some_AI_func:

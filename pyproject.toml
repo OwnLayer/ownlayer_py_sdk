@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "ownlayer-sdk"
+name = "ownlayer"
 version = "0.1.0"
 description = "Ownlayer Python SDK"
 authors = ["Diego Sisto <diego@ownlayer.com>", "Jack <jack@ownlayer.com>"]
