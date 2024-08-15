@@ -1,7 +1,5 @@
-from ownlayer_py_sdk.ownlayer_api import post_inference
-
 # import openai
-from ownlayer_py_sdk.openai import openai # OpenAI integration
+from ownlayer.openai import openai # OpenAI integration
  
 def main():
     openai_response = openai.chat.completions.create(

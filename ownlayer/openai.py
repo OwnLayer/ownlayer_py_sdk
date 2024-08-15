@@ -1,7 +1,7 @@
 import types
 
 from wrapt import wrap_function_wrapper
-from .ownlayer_api import post_inference
+from .ownlayer_api import post_inference, Inference
 from datetime import datetime, timezone
 
 try:
@@ -172,7 +172,6 @@ def _ownlayer_wrapper(func):
 def _generate_trace(request, output, prompt_tokens, total_tokens, start_time):
     try:
         messages = request.get("messages", [])
-        input = list(filter(lambda x: x["role"] == "user", messages))[-1]["content"]
         system_messages = list(filter(lambda x: x["role"] == "system", messages))
         settings = {
             "provider": "OpenAI",
@@ -183,16 +182,18 @@ def _generate_trace(request, output, prompt_tokens, total_tokens, start_time):
         }
         additional_metadata = { "_source": "ownlayer_py_sdk", "_sdk_version": "0.1.1" }
 
-        post_inference(input=input,
-                    output=output,
-                    start_time=start_time,
-                    end_time=now(),
-                    prompt_tokens=prompt_tokens,
-                    total_tokens=total_tokens,
-                    completion_tokens= total_tokens - prompt_tokens,
-                    additional_metadata=additional_metadata,
-                    settings=settings
-                    )
+        inference = Inference(
+            input_messages=messages,
+            output=output,
+            start_time=start_time,
+            end_time=now(),
+            prompt_tokens=prompt_tokens,
+            total_tokens=total_tokens,
+            completion_tokens= total_tokens - prompt_tokens,
+            additional_metadata=additional_metadata,
+            settings=settings
+        )
+        post_inference(inference)
     except Exception as ex:
         print(f"Exception during ownlayer trace: {ex}")
 
