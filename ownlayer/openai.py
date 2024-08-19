@@ -2,7 +2,7 @@ import types
 
 from wrapt import wrap_function_wrapper
 from .ownlayer_api import post_inference, Inference
-from datetime import datetime, timezone
+from .utils import now, get_metadata
 
 try:
     import openai
@@ -16,9 +16,6 @@ try:
 except ImportError:
     AsyncOpenAI = None
     OpenAI = None
-
-def now():
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 class OpenAiDefinition:
     module: str
@@ -180,7 +177,6 @@ def _generate_trace(request, output, prompt_tokens, total_tokens, start_time):
             "temperature": request.get("temperature", None),
             "system_message": system_messages[-1]["content"] if len(system_messages) > 0 else ""
         }
-        additional_metadata = { "_source": "ownlayer_py_sdk", "_sdk_version": "0.1.1" }
 
         inference = Inference(
             input_messages=messages,
@@ -190,7 +186,7 @@ def _generate_trace(request, output, prompt_tokens, total_tokens, start_time):
             prompt_tokens=prompt_tokens,
             total_tokens=total_tokens,
             completion_tokens= total_tokens - prompt_tokens,
-            additional_metadata=additional_metadata,
+            additional_metadata=get_metadata(),
             settings=settings
         )
         post_inference(inference)

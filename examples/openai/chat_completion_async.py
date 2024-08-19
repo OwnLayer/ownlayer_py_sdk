@@ -2,7 +2,7 @@ import os
 import asyncio
 
 # from openai import AsyncOpenAI
-from ownlayer.openai import AsyncOpenAI # OpenAI integration
+from ownlayer.openai import AsyncOpenAI # Ownlayer integration
 
 client = AsyncOpenAI(
     # This is the default and can be omitted

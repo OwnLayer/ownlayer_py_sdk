@@ -27,3 +27,17 @@ Be sure to have add `OWNLAYER_API_KEY` to your `.env` file:
 ```dotenv
 OWNLAYER_API_KEY=ey...xxx
 ```
+
+## Running examples
+
+The "examples" folder holds demos of how to use this SDK. In order to run one from root folder run:
+
+```bash
+python -m examples.<path-to-example>
+```
+
+E.g. to run `openai/chat_completion.py` example, run:
+
+```bash
+python -m examples.openai.chat_completion
+```

@@ -1,5 +1,5 @@
 # import openai
-from ownlayer.openai import openai # OpenAI integration
+from ownlayer.openai import openai # Ownlayer integration
  
 def main():
     openai_response = openai.chat.completions.create(
