@@ -7,13 +7,17 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-openai = "^1.37.2"
 python-dotenv = "^1.0.1"
 wrapt = "^1.16.0"
 requests = "^2.32.3"
 datetime = "^5.5"
 pydantic = "^2.8.2"
-anthropic = "^0.34.0"
+openai = { version = "^1.37.2", optional = true }
+anthropic = { version = "^0.34.0", optional = true }
+
+[tool.poetry.extras]
+openai = ["openai"]
+anthropic = ["anthropic"]
 
 [build-system]
 requires = ["poetry-core"]

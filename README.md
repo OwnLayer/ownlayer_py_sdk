@@ -30,6 +30,13 @@ OWNLAYER_API_KEY=ey...xxx
 
 ## Running examples
 
+First you'll need to install the SDK of your choice (or all of them)
+
+```bash
+poetry install --extras "openai" # needed to use openai
+poetry install --extras "anthropic" # needed to use anthropic
+```
+
 The "examples" folder holds demos of how to use this SDK. In order to run one from root folder run:
 
 ```bash
