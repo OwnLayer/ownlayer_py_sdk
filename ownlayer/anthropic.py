@@ -4,6 +4,7 @@ from .utils import now, get_metadata
 
 try:
     from anthropic import *
+    from anthropic import MessageStreamManager
 
 except ImportError:
     raise ModuleNotFoundError(
@@ -35,6 +36,40 @@ def wrap_anthropic_call(wrapped, instance, args, kwargs):
     )
     post_inference(inference)
     
+    return anthropic_response
+
+def wrap_stream_anthropic_enter_call(wrapped, instance: MessageStreamManager, args, kwargs):
+    instance.start_time = now()
+    return wrapped(*args, **kwargs)
+
+def wrap_stream_anthropic_exit_call(wrapped, instance: MessageStreamManager, args, kwargs):
+    start_time= instance.start_time or 0
+    request_data = instance._MessageStreamManager__api_request.keywords['body']
+
+    settings = {
+        "provider": "Anthropic",
+        "model": request_data["model"] if bool(request_data["model"]) else None,
+        "max_tokens": request_data["max_tokens"] if bool(request_data["max_tokens"]) else None,
+        "temperature": request_data["temperature"] if bool(request_data["temperature"]) else None,
+        "system_message": request_data["system"] if bool(request_data["system"]) else None
+    }
+
+    message = instance._MessageStreamManager__stream._MessageStream__final_message_snapshot
+    output = message.content[0].text
+
+    inference = Inference(
+        input_messages=request_data.get('messages'),
+        output=output,
+        start_time=start_time,
+        end_time=now(),
+        prompt_tokens=message.usage.input_tokens,
+        total_tokens=message.usage.input_tokens + message.usage.output_tokens,
+        completion_tokens=message.usage.output_tokens,
+        additional_metadata=get_metadata(),
+        settings=settings
+    )
+    post_inference(inference)
+
     return wrapped(*args, **kwargs)
 
 class AnthropicOwnlayer:
@@ -46,6 +81,20 @@ class AnthropicOwnlayer:
             'anthropic.resources.messages',
             'Messages.create',
             wrap_anthropic_call
+        )
+
+        # wrapping stream entry and exit
+        # exit, to trace only when stream has ended
+        # entry, to set start time
+        wrap_function_wrapper(
+            'anthropic.lib.streaming._messages',
+            'MessageStreamManager.__enter__',
+            wrap_stream_anthropic_enter_call
+        )
+        wrap_function_wrapper(
+            'anthropic.lib.streaming._messages',
+            'MessageStreamManager.__exit__',
+            wrap_stream_anthropic_exit_call
         )
 
 
