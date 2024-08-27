@@ -75,5 +75,3 @@ def post_inference(inference: Inference):
 
     if not res.ok:
         print(f"Error tracing call {res.text}")
-    else:
-        print(f"New ownlayer trace {res.text}")
