@@ -1,6 +1,7 @@
 from wrapt import wrap_function_wrapper
 from .ownlayer_api import post_inference, Inference
 from .utils import now, get_metadata
+from .calculate_cost import calculate_cost
 
 try:
     from anthropic import *
@@ -32,7 +33,8 @@ def wrap_anthropic_call(wrapped, instance, args, kwargs):
         total_tokens=anthropic_response.usage.input_tokens + anthropic_response.usage.output_tokens,
         completion_tokens=anthropic_response.usage.output_tokens,
         additional_metadata=get_metadata(),
-        settings=settings
+        settings=settings,
+        cost=calculate_cost(kwargs.get("model", None), anthropic_response.usage.input_tokens, anthropic_response.usage.output_tokens)
     )
     post_inference(inference)
     

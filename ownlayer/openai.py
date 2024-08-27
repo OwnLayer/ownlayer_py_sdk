@@ -3,6 +3,7 @@ import types
 from wrapt import wrap_function_wrapper
 from .ownlayer_api import post_inference, Inference
 from .utils import now, get_metadata
+from .calculate_cost import calculate_cost
 
 try:
     import openai
@@ -187,7 +188,8 @@ def _generate_trace(request, output, prompt_tokens, total_tokens, start_time):
             total_tokens=total_tokens,
             completion_tokens= total_tokens - prompt_tokens,
             additional_metadata=get_metadata(),
-            settings=settings
+            settings=settings,
+            cost=calculate_cost(request.get("model", None), prompt_tokens, total_tokens - prompt_tokens)
         )
         post_inference(inference)
     except Exception as ex:
